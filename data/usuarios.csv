@@ -1,0 +1,5 @@
+id,nome,usuario,senha_hash,perfil,territorio
+1,Administrador,admin,$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBdXfs2Sk4u2EK,gerencia,Todos
+2,Coordenador 1,coord1,$2b$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi,coordenador,Centro
+3,Inspetor 1,insp1,$2b$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi,inspetor,Centro
+
