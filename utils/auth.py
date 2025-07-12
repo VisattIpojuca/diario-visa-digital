@@ -3,7 +3,7 @@ Sistema de autenticação para o Diário de Campo Digital
 """
 import streamlit as st
 import pandas as pd
-import bcrypt
+import hashlib
 import os
 from typing import Optional, Dict, Any
 
@@ -48,17 +48,18 @@ class AuthManager:
             default_users.to_csv(self.users_file, index=False)
     
     def hash_password(self, password: str) -> str:
-        """Gera hash da senha"""
-        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        """Gera hash SHA256 da senha"""
+        return hashlib.sha256(password.encode('utf-8')).hexdigest()
     
     def verify_password(self, password: str, hashed: str) -> bool:
-        """Verifica se a senha confere com o hash"""
-        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+        """Verifica se a senha confere com o hash SHA256"""
+        return self.hash_password(password) == hashed
     
     def authenticate(self, username: str, password: str) -> Optional[Dict[str, Any]]:
         """Autentica usuário e retorna dados se válido"""
         try:
             users_df = pd.read_csv(self.users_file)
+            
             user = users_df[users_df['username'] == username]
             
             if len(user) == 1 and user.iloc[0]['ativo']:
@@ -127,4 +128,5 @@ class AuthManager:
 
 # Instância global do gerenciador de autenticação
 auth_manager = AuthManager()
+
 

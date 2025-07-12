@@ -1,5 +1,4 @@
-id,nome,usuario,senha_hash,perfil,territorio
-1,Administrador,admin,$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBdXfs2Sk4u2EK,gerencia,Todos
-2,Coordenador 1,coord1,$2b$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi,coordenador,Centro
-3,Inspetor 1,insp1,$2b$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi,inspetor,Centro
-
+id,username,password,nome,perfil,territorio,ativo
+1,admin,240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9,Administrador,gerencia,Todos,True
+2,coord1,8c63a2fc2b14d8ae6f9d0bf2e2c4227ac2dc4bd84768e1259226b0c3d84f1c65,Coordenador Teste,coordenador,Centro,True
+3,insp1,2bc889f051d5ebe9768b322aa806c1a17ba00f253ec4c1515d51ef99fa386aa0,Inspetor Teste,inspetor,Norte,True

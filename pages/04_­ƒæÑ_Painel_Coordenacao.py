@@ -4,8 +4,7 @@ Painel de Coordenação - Gestão de processos e equipe
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
-import plotly.express as px
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 import sys
 import os
 
@@ -35,39 +34,39 @@ def get_inspector_stats():
     # Carregar dados de usuários para obter nomes
     try:
         users_df = pd.read_csv("data/usuarios.csv")
-        users_dict = dict(zip(users_df['id'], users_df['nome']))
-    except:
+        users_dict = dict(zip(users_df["id"], users_df["nome"])) # Use "id" e "nome"
+    except Exception:
         users_dict = {}
     
     # Agrupar por inspetor
-    stats = df.groupby('inspetor_id').agg({
-        'id': 'count',  # Total de inspeções
-        'status': lambda x: (x == 'pendente').sum(),  # Pendentes
-        'data_inspecao': lambda x: (pd.to_datetime(x).dt.month == datetime.now().month).sum()  # Mês atual
+    stats = df.groupby("inspetor_id").agg({
+        "id": "count",  # Total de inspeções
+        "status": lambda x: (x == "pendente").sum(),  # Pendentes
+        "data_inspecao": lambda x: (pd.to_datetime(x).dt.month == datetime.now().month).sum()  # Mês atual
     }).reset_index()
     
-    stats.columns = ['inspetor_id', 'total', 'pendentes', 'mes_atual']
+    stats.columns = ["inspetor_id", "total", "pendentes", "mes_atual"]
     
     # Calcular vencidas
     hoje = datetime.now().date()
     vencidas_por_inspetor = []
     
-    for inspetor_id in stats['inspetor_id']:
-        df_inspetor = df[df['inspetor_id'] == inspetor_id]
+    for inspetor_id in stats["inspetor_id"]:
+        df_inspetor = df[df["inspetor_id"] == inspetor_id]
         vencidas = 0
         
         for _, row in df_inspetor.iterrows():
-            if row['status'] == 'pendente':
-                if (pd.notna(row['prazo_inspetor']) and row['prazo_inspetor'].date() < hoje) or \
-                   (pd.notna(row['prazo_coordenacao']) and row['prazo_coordenacao'].date() < hoje):
+            if row["status"] == "pendente":
+                if (pd.notna(row["prazo_inspetor"]) and row["prazo_inspetor"].date() < hoje) or \
+                   (pd.notna(row["prazo_coordenacao"]) and row["prazo_coordenacao"].date() < hoje):
                     vencidas += 1
         
         vencidas_por_inspetor.append(vencidas)
     
-    stats['vencidas'] = vencidas_por_inspetor
+    stats["vencidas"] = vencidas_por_inspetor
     
     # Adicionar nomes dos inspetores
-    stats['nome_inspetor'] = stats['inspetor_id'].map(users_dict).fillna('Desconhecido')
+    stats["nome_inspetor"] = stats["inspetor_id"].map(users_dict).fillna("Desconhecido")
     
     return stats
 
@@ -77,7 +76,7 @@ def get_critical_processes():
     hoje = datetime.now().date()
     
     # Filtrar apenas pendentes
-    df_pendentes = df[df['status'] == 'pendente'].copy()
+    df_pendentes = df[df["status"] == "pendente"].copy()
     
     if len(df_pendentes) == 0:
         return pd.DataFrame()
@@ -86,39 +85,39 @@ def get_critical_processes():
     critical = []
     
     for _, row in df_pendentes.iterrows():
-        urgencia = 'baixa'
+        urgencia = "baixa"
         dias_vencimento = None
         
         # Verificar prazo do inspetor
-        if pd.notna(row['prazo_inspetor']):
-            dias = (row['prazo_inspetor'].date() - hoje).days
+        if pd.notna(row["prazo_inspetor"]):
+            dias = (row["prazo_inspetor"].date() - hoje).days
             if dias < 0:
-                urgencia = 'alta'
+                urgencia = "alta"
                 dias_vencimento = abs(dias)
             elif dias <= 3:
-                urgencia = 'media'
+                urgencia = "media"
                 dias_vencimento = dias
         
         # Verificar prazo da coordenação
-        if pd.notna(row['prazo_coordenacao']):
-            dias = (row['prazo_coordenacao'].date() - hoje).days
+        if pd.notna(row["prazo_coordenacao"]):
+            dias = (row["prazo_coordenacao"].date() - hoje).days
             if dias < 0:
-                urgencia = 'alta'
+                urgencia = "alta"
                 dias_vencimento = abs(dias)
-            elif dias <= 3 and urgencia != 'alta':
-                urgencia = 'media'
+            elif dias <= 3 and urgencia != "alta":
+                urgencia = "media"
                 dias_vencimento = dias
         
-        if urgencia in ['alta', 'media']:
+        if urgencia in ["alta", "media"]:
             critical.append({
-                'id': row['id'],
-                'estabelecimento': row['estabelecimento'],
-                'inspetor_id': row['inspetor_id'],
-                'urgencia': urgencia,
-                'dias_vencimento': dias_vencimento,
-                'prazo_inspetor': row['prazo_inspetor'],
-                'prazo_coordenacao': row['prazo_coordenacao'],
-                'classificacao_risco': row['classificacao_risco']
+                "id": row["id"],
+                "estabelecimento": row["estabelecimento"],
+                "inspetor_id": row["inspetor_id"],
+                "urgencia": urgencia,
+                "dias_vencimento": dias_vencimento,
+                "prazo_inspetor": row["prazo_inspetor"],
+                "prazo_coordenacao": row["prazo_coordenacao"],
+                "classificacao_risco": row["classificacao_risco"]
             })
     
     return pd.DataFrame(critical)
@@ -137,8 +136,8 @@ def main():
     
     if len(stats_df) > 0:
         # Exibir tabela de estatísticas
-        display_stats = stats_df[['nome_inspetor', 'total', 'pendentes', 'vencidas', 'mes_atual']].copy()
-        display_stats.columns = ['Inspetor', 'Total', 'Pendentes', 'Vencidas', 'Mês Atual']
+        display_stats = stats_df[["nome_inspetor", "total", "pendentes", "vencidas", "mes_atual"]].copy()
+        display_stats.columns = ["Inspetor", "Total", "Pendentes", "Vencidas", "Mês Atual"]
         
         st.dataframe(display_stats, use_container_width=True, hide_index=True)
         
@@ -147,42 +146,31 @@ def main():
         
         with col1:
             st.markdown("#### 📈 Inspeções por Inspetor")
-            fig = px.bar(
-                stats_df, 
-                x='nome_inspetor', 
-                y='total',
-                title='Total de Inspeções por Inspetor',
-                color='total',
-                color_continuous_scale='Blues'
-            )
-            fig.update_layout(height=300, showlegend=False)
-            st.plotly_chart(fig, use_container_width=True)
+            fig, ax = plt.subplots()
+            ax.bar(stats_df["nome_inspetor"], stats_df["total"], color="skyblue")
+            ax.set_title("Total de Inspeções por Inspetor")
+            ax.set_xlabel("Inspetor")
+            ax.set_ylabel("Total de Inspeções")
+            plt.xticks(rotation=45, ha="right")
+            st.pyplot(fig)
         
         with col2:
             st.markdown("#### ⚠️ Situação Atual")
-            fig = go.Figure()
+            fig, ax = plt.subplots()
             
-            fig.add_trace(go.Bar(
-                name='Pendentes',
-                x=stats_df['nome_inspetor'],
-                y=stats_df['pendentes'],
-                marker_color='orange'
-            ))
+            bar_width = 0.35
+            index = range(len(stats_df["nome_inspetor"]))
             
-            fig.add_trace(go.Bar(
-                name='Vencidas',
-                x=stats_df['nome_inspetor'],
-                y=stats_df['vencidas'],
-                marker_color='red'
-            ))
+            bar1 = ax.bar([i - bar_width/2 for i in index], stats_df["pendentes"], bar_width, label="Pendentes", color="orange")
+            bar2 = ax.bar([i + bar_width/2 for i in index], stats_df["vencidas"], bar_width, label="Vencidas", color="red")
             
-            fig.update_layout(
-                barmode='stack',
-                height=300,
-                title='Pendentes e Vencidas por Inspetor'
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
+            ax.set_title("Pendentes e Vencidas por Inspetor")
+            ax.set_xlabel("Inspetor")
+            ax.set_ylabel("Número de Inspeções")
+            ax.set_xticks(index)
+            ax.set_xticklabels(stats_df["nome_inspetor"], rotation=45, ha="right")
+            ax.legend()
+            st.pyplot(fig)
     else:
         st.info("Nenhuma inspeção cadastrada ainda.")
     
@@ -195,25 +183,25 @@ def main():
     
     if len(critical_df) > 0:
         # Separar por urgência
-        alta_urgencia = critical_df[critical_df['urgencia'] == 'alta']
-        media_urgencia = critical_df[critical_df['urgencia'] == 'media']
+        alta_urgencia = critical_df[critical_df["urgencia"] == "alta"]
+        media_urgencia = critical_df[critical_df["urgencia"] == "media"]
         
         if len(alta_urgencia) > 0:
             st.markdown("#### 🔴 Alta Urgência (Vencidas)")
             for _, row in alta_urgencia.iterrows():
                 st.error(f"""
-                **{row['estabelecimento']}** - Vencida há {row['dias_vencimento']} dias
+                **{row["estabelecimento"]}** - Vencida há {row["dias_vencimento"]} dias
                 
-                Inspetor ID: {row['inspetor_id']} | Risco: {row['classificacao_risco'].title()}
+                Inspetor ID: {row["inspetor_id"]} | Risco: {row["classificacao_risco"].title()}
                 """)
         
         if len(media_urgencia) > 0:
             st.markdown("#### 🟡 Atenção (Próximas do Vencimento)")
             for _, row in media_urgencia.iterrows():
                 st.warning(f"""
-                **{row['estabelecimento']}** - Vence em {row['dias_vencimento']} dias
+                **{row["estabelecimento"]}** - Vence em {row["dias_vencimento"]} dias
                 
-                Inspetor ID: {row['inspetor_id']} | Risco: {row['classificacao_risco'].title()}
+                Inspetor ID: {row["inspetor_id"]} | Risco: {row["classificacao_risco"].title()}
                 """)
     else:
         st.success("✅ Nenhum processo crítico no momento!")
@@ -246,8 +234,8 @@ def show_detailed_report():
     if len(df) > 0:
         # Estatísticas gerais
         total = len(df)
-        pendentes = len(df[df['status'] == 'pendente'])
-        concluidas = len(df[df['status'] == 'concluido'])
+        pendentes = len(df[df["status"] == "pendente"])
+        concluidas = len(df[df["status"] == "concluido"])
         
         col1, col2, col3 = st.columns(3)
         
@@ -262,15 +250,12 @@ def show_detailed_report():
         
         # Distribuição por risco
         st.markdown("#### Distribuição por Risco")
-        risco_counts = df['classificacao_risco'].value_counts()
+        risco_counts = df["classificacao_risco"].value_counts()
         
-        fig = px.pie(
-            values=risco_counts.values,
-            names=risco_counts.index,
-            title="Distribuição por Classificação de Risco"
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
+        fig, ax = plt.subplots()
+        ax.pie(risco_counts.values, labels=risco_counts.index, autopct="%1.1f%%")
+        ax.set_title("Distribuição por Classificação de Risco")
+        st.pyplot(fig)
         
         # Exportar relatório
         if st.button("📄 Exportar Relatório Completo"):
@@ -282,4 +267,5 @@ def show_detailed_report():
 
 if __name__ == "__main__":
     main()
+
 

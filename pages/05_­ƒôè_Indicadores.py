@@ -3,8 +3,7 @@ Dashboard de Indicadores e Relatórios
 """
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import sys
 import os
@@ -92,32 +91,20 @@ def create_monthly_trend_chart(df, user_profile, user_id):
     monthly_data = df_copy.groupby(['mes_ano', 'status']).size().unstack(fill_value=0)
     monthly_data.index = monthly_data.index.astype(str)
     
-    fig = go.Figure()
+    fig, ax = plt.subplots()
     
     if 'pendente' in monthly_data.columns:
-        fig.add_trace(go.Scatter(
-            x=monthly_data.index,
-            y=monthly_data['pendente'],
-            mode='lines+markers',
-            name='Pendentes',
-            line=dict(color='orange')
-        ))
+        ax.plot(monthly_data.index, monthly_data['pendente'], marker='o', label='Pendentes', color='orange')
     
     if 'concluido' in monthly_data.columns:
-        fig.add_trace(go.Scatter(
-            x=monthly_data.index,
-            y=monthly_data['concluido'],
-            mode='lines+markers',
-            name='Concluídas',
-            line=dict(color='green')
-        ))
+        ax.plot(monthly_data.index, monthly_data['concluido'], marker='o', label='Concluídas', color='green')
     
-    fig.update_layout(
-        title='Tendência Mensal de Inspeções',
-        xaxis_title='Mês',
-        yaxis_title='Número de Inspeções',
-        height=400
-    )
+    ax.set_title('Tendência Mensal de Inspeções')
+    ax.set_xlabel('Mês')
+    ax.set_ylabel('Número de Inspeções')
+    ax.legend()
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
     
     return fig
 
@@ -137,18 +124,9 @@ def create_risk_distribution_chart(df, user_profile, user_id):
         'baixo': '#2ca02c'
     }
     
-    fig = px.pie(
-        values=risk_counts.values,
-        names=[name.title() for name in risk_counts.index],
-        title='Distribuição por Classificação de Risco',
-        color_discrete_map={
-            'Alto': colors.get('alto', '#d62728'),
-            'Medio': colors.get('medio', '#ff7f0e'),
-            'Baixo': colors.get('baixo', '#2ca02c')
-        }
-    )
-    
-    fig.update_layout(height=400)
+    fig, ax = plt.subplots()
+    ax.pie(risk_counts.values, labels=[name.title() for name in risk_counts.index], autopct='%1.1f%%', colors=[colors.get(name, '#7f7f7f') for name in risk_counts.index])
+    ax.set_title('Distribuição por Classificação de Risco')
     
     return fig
 
@@ -169,9 +147,9 @@ def create_status_chart(df, user_profile, user_id):
             status_atual.append('Concluída')
         elif row['status'] == 'pendente':
             vencida = False
-            if pd.notna(row['prazo_inspetor']) and row['prazo_inspetor'].date() < hoje:
+            if pd.notna(row['prazo_inspetor']) and pd.to_datetime(row['prazo_inspetor']).date() < hoje:
                 vencida = True
-            if pd.notna(row['prazo_coordenacao']) and row['prazo_coordenacao'].date() < hoje:
+            if pd.notna(row['prazo_coordenacao']) and pd.to_datetime(row['prazo_coordenacao']).date() < hoje:
                 vencida = True
             
             if vencida:
@@ -190,18 +168,12 @@ def create_status_chart(df, user_profile, user_id):
         'Outro': '#7f7f7f'
     }
     
-    fig = go.Figure(data=[go.Bar(
-        x=status_counts.index,
-        y=status_counts.values,
-        marker_color=[colors.get(status, '#7f7f7f') for status in status_counts.index]
-    )])
-    
-    fig.update_layout(
-        title='Status Atual das Inspeções',
-        xaxis_title='Status',
-        yaxis_title='Quantidade',
-        height=400
-    )
+    fig, ax = plt.subplots()
+    ax.bar(status_counts.index, status_counts.values, color=[colors.get(status, '#7f7f7f') for status in status_counts.index])
+    ax.set_title('Status Atual das Inspeções')
+    ax.set_xlabel('Status')
+    ax.set_ylabel('Quantidade')
+    plt.tight_layout()
     
     return fig
 
@@ -227,29 +199,21 @@ def create_inspector_performance_chart(df):
     inspector_stats['pendentes'] = inspector_stats['total'] - inspector_stats['concluidas']
     inspector_stats['nome'] = inspector_stats['inspetor_id'].map(users_dict).fillna('Desconhecido')
     
-    fig = go.Figure()
+    fig, ax = plt.subplots()
     
-    fig.add_trace(go.Bar(
-        name='Concluídas',
-        x=inspector_stats['nome'],
-        y=inspector_stats['concluidas'],
-        marker_color='green'
-    ))
+    bar_width = 0.35
+    index = range(len(inspector_stats['nome']))
     
-    fig.add_trace(go.Bar(
-        name='Pendentes',
-        x=inspector_stats['nome'],
-        y=inspector_stats['pendentes'],
-        marker_color='orange'
-    ))
+    bar1 = ax.bar([i - bar_width/2 for i in index], inspector_stats['concluidas'], bar_width, label='Concluídas', color='green')
+    bar2 = ax.bar([i + bar_width/2 for i in index], inspector_stats['pendentes'], bar_width, label='Pendentes', color='orange')
     
-    fig.update_layout(
-        title='Performance por Inspetor',
-        xaxis_title='Inspetor',
-        yaxis_title='Número de Inspeções',
-        barmode='stack',
-        height=400
-    )
+    ax.set_title('Performance por Inspetor')
+    ax.set_xlabel('Inspetor')
+    ax.set_ylabel('Número de Inspeções')
+    ax.set_xticks(index)
+    ax.set_xticklabels(inspector_stats['nome'], rotation=45, ha='right')
+    ax.legend()
+    plt.tight_layout()
     
     return fig
 
@@ -361,7 +325,7 @@ def main():
         # Tendência mensal
         fig_trend = create_monthly_trend_chart(df_filtrado, user['perfil'], user['id'])
         if fig_trend:
-            st.plotly_chart(fig_trend, use_container_width=True)
+            st.pyplot(fig_trend)
         else:
             st.info("Dados insuficientes para gráfico de tendência")
     
@@ -369,7 +333,7 @@ def main():
         # Distribuição por risco
         fig_risk = create_risk_distribution_chart(df_filtrado, user['perfil'], user['id'])
         if fig_risk:
-            st.plotly_chart(fig_risk, use_container_width=True)
+            st.pyplot(fig_risk)
         else:
             st.info("Dados insuficientes para gráfico de risco")
     
@@ -380,7 +344,7 @@ def main():
         # Status das inspeções
         fig_status = create_status_chart(df_filtrado, user['perfil'], user['id'])
         if fig_status:
-            st.plotly_chart(fig_status, use_container_width=True)
+            st.pyplot(fig_status)
         else:
             st.info("Dados insuficientes para gráfico de status")
     
@@ -389,7 +353,7 @@ def main():
         if user['perfil'] in ['coordenador', 'gerencia']:
             fig_performance = create_inspector_performance_chart(df_filtrado)
             if fig_performance:
-                st.plotly_chart(fig_performance, use_container_width=True)
+                st.pyplot(fig_performance)
             else:
                 st.info("Dados insuficientes para gráfico de performance")
         else:
@@ -404,15 +368,14 @@ def main():
                     df_inspetor_copy = df_inspetor_copy.sort_values('data_inspecao')
                     df_inspetor_copy['acumulado'] = range(1, len(df_inspetor_copy) + 1)
                     
-                    fig = px.line(
-                        df_inspetor_copy,
-                        x='data_inspecao',
-                        y='acumulado',
-                        title='Suas Inspeções Acumuladas',
-                        markers=True
-                    )
-                    
-                    st.plotly_chart(fig, use_container_width=True)
+                    fig, ax = plt.subplots()
+                    ax.plot(df_inspetor_copy['data_inspecao'], df_inspetor_copy['acumulado'], marker='o')
+                    ax.set_title('Suas Inspeções Acumuladas')
+                    ax.set_xlabel('Data da Inspeção')
+                    ax.set_ylabel('Inspeções Acumuladas')
+                    plt.xticks(rotation=45, ha='right')
+                    plt.tight_layout()
+                    st.pyplot(fig)
                 else:
                     st.info("Você ainda não possui inspeções no período selecionado")
             else:
@@ -434,10 +397,10 @@ def main():
         # Formatar datas
         display_df['Data Inspeção'] = pd.to_datetime(display_df['data_inspecao']).dt.strftime('%d/%m/%Y')
         display_df['Prazo Inspetor'] = display_df['prazo_inspetor'].apply(
-            lambda x: x.strftime('%d/%m/%Y') if pd.notna(x) else '-'
+            lambda x: pd.to_datetime(x).strftime('%d/%m/%Y') if pd.notna(x) else '-'
         )
         display_df['Prazo Coordenação'] = display_df['prazo_coordenacao'].apply(
-            lambda x: x.strftime('%d/%m/%Y') if pd.notna(x) else '-'
+            lambda x: pd.to_datetime(x).strftime('%d/%m/%Y') if pd.notna(x) else '-'
         )
         
         # Selecionar colunas
@@ -481,4 +444,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
